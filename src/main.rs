@@ -1,6 +1,8 @@
 use serde::Deserialize;
 use std::time::{Instant, Duration};
 use futures::future::join_all;
+use std::fs::File;
+use std::io::prelude::*;
 
 #[derive(Deserialize, Debug)]
 struct Mirror {
@@ -48,7 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut status_data: StatusData = serde_json::from_str(&status_req)?;
 
     let servers = status_data.urls.iter_mut()
-        .filter(|x| x.protocol == "https" && x.ipv4 && x.active)
+        .filter(|x| &x.protocol == "https" && x.ipv4 && x.active)
         .filter(|x| match x.score {
             Some(_) => true,
             None => false,
@@ -70,10 +72,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .collect::<Vec<_>>();
 
-    
     let times = join_all(waiting).await;
 
-    let mut urls = (0..servers.len()).into_iter()
+    let mut ranked = (0..servers.len()).into_iter()
         .filter_map(|i| {
             if let Ok(time) = times[i] {
                 let url = ["Server = ", &servers[i].url, "$repo/os/$arch"].join("");
@@ -86,22 +87,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .filter(|x| x.score > 0.5)
         .collect::<Vec<_>>();
 
-    urls.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+    ranked.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
 
-    println!("{:?}", urls);
+    let strings = ranked.iter().map(|x| x.url.to_string()).collect::<Vec<_>>().join("\n");
+
+    let mut file = File::create("testing.txt")?;
+    file.write_all(strings.as_bytes())?;
 
     Ok(())
 }
 
 async fn get_response_time(client: &reqwest::Client, url: &str) -> Result<u128, Box<dyn std::error::Error>> {
-    println!("creating");
     let now = Instant::now();
     client.get(url).send().await?;
-    println!("done {}", now.elapsed().as_millis());
     Ok(now.elapsed().as_millis())
 }
 
-fn weighted_score(score: f64, time: f64) -> f64 {
+fn weighted_score(score: f64, time: f64) -> f64 { // probably better to find something less expensive? nvm rust is so fast it doesnt matter.
     (-(time * time) / 100.).exp() * 0.5 +
     (-(score * score) / 100.).exp() * 0.5
 }
