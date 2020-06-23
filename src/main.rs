@@ -1,6 +1,6 @@
 use serde::Deserialize;
-use std::time::Instant;
-// use rayon::prelude::*;
+use std::time::{Instant, Duration};
+use futures::future::join_all;
 
 #[derive(Deserialize, Debug)]
 struct Mirror {
@@ -31,6 +31,11 @@ struct StatusData {
     version: u16
 }
 
+#[derive(Debug)]
+struct Ranked {
+    url: String,
+    score: f64,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -49,18 +54,54 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             None => false,
         })
         .map(|x| {
-            x.url = [&x.url, "core/os/x86_64/"].join("");
-            x.details = [&x.url, "core.db.tar.gz"].join("");
+            //x.url = [&x.url, "core/os/x86_64/"].join("");
+            x.details = [&x.url, "core/os/x86_64/core.db.tar.gz"].join("");
             x
         })
         .collect::<Vec<_>>();
  
-    println!("took {} ms", get_response_time(&servers[15].details).await?);
+    let client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(15))
+        .build()?;
+
+    let waiting = servers.iter()
+        .map(|x| {
+            get_response_time(&client, &x.details)
+        })
+        .collect::<Vec<_>>();
+
+    
+    let times = join_all(waiting).await;
+
+    let mut urls = (0..servers.len()).into_iter()
+        .filter_map(|i| {
+            if let Ok(time) = times[i] {
+                let url = ["Server = ", &servers[i].url, "$repo/os/$arch"].join("");
+                let score = weighted_score(servers[i].score?, (time as f64) / 1000.);
+                Some(Ranked { url, score })
+            } else {
+                None
+            }
+        })
+        .filter(|x| x.score > 0.5)
+        .collect::<Vec<_>>();
+
+    urls.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+
+    println!("{:?}", urls);
+
     Ok(())
 }
 
-async fn get_response_time(url: &str) -> Result<u128, Box<dyn std::error::Error>> {
+async fn get_response_time(client: &reqwest::Client, url: &str) -> Result<u128, Box<dyn std::error::Error>> {
+    println!("creating");
     let now = Instant::now();
-    reqwest::get(url).await?;
+    client.get(url).send().await?;
+    println!("done {}", now.elapsed().as_millis());
     Ok(now.elapsed().as_millis())
+}
+
+fn weighted_score(score: f64, time: f64) -> f64 {
+    (-(time * time) / 100.).exp() * 0.5 +
+    (-(score * score) / 100.).exp() * 0.5
 }
