@@ -72,6 +72,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 
 [[package]]
+name = "chrono"
+version = "0.4.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "80094f509cf8b5ae86a4966a39b3ff66cd7e2a3e594accec3743ff3fabeab5b2"
+dependencies = [
+ "num-integer",
+ "num-traits",
+ "time",
+]
+
+[[package]]
 name = "clap"
 version = "2.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -544,18 +555,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mirrors"
-version = "0.1.0"
-dependencies = [
- "clap",
- "futures",
- "reqwest",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "native-tls"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -582,6 +581,25 @@ dependencies = [
  "cfg-if",
  "libc",
  "winapi 0.3.8",
+]
+
+[[package]]
+name = "num-integer"
+version = "0.1.43"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d59457e662d541ba17869cf51cf177c0b5f0cbf476c66bdc90bf1edac4f875b"
+dependencies = [
+ "autocfg",
+ "num-traits",
+]
+
+[[package]]
+name = "num-traits"
+version = "0.2.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac267bcc07f48ee5f8935ab0d24f316fb722d7a1292e2913f0cc196b29ffd611"
+dependencies = [
+ "autocfg",
 ]
 
 [[package]]
@@ -802,6 +820,19 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "winreg",
+]
+
+[[package]]
+name = "rmirrors"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "futures",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
