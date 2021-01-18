@@ -106,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         servers
             .into_iter()
             .map(|x| Ranked {
-                url: x.url.to_string(),
+                url: ["Server = ", &x.url, "$repo/os/$arch"].join(""),
                 score: 1. / x.score.unwrap(),
             })
             .collect::<Vec<_>>()
@@ -146,5 +146,7 @@ async fn get_response_time(
 
 fn weighted_score(score: f64, time: f64) -> f64 {
     // probably better to find something less expensive? nvm rust is so fast it doesnt matter.
+    // +this isnt the bottleneck anyways.
     (-(time * time) / 100.).exp() * 0.5 + (-(score * score) / 100.).exp() * 0.5
+
 }
